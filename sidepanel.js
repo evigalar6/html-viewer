@@ -121,9 +121,17 @@ function formatHtmlForView(rawHtml) {
         return;
       }
 
-      const compact = text.replace(/\s+/g, " ").trim();
-      if (compact) {
-        lines.push(`${indent}${compact}`);
+      // Keep formatting readable, but preserve non-breaking spaces as visible entities.
+      let normalized = text
+        .replaceAll("\r\n", "\n")
+        .replace(/[ \t\f\v]+/g, " ")
+        .replace(/\n+/g, " ");
+
+      // Trim only regular spaces; keep non-breaking spaces intact.
+      normalized = normalized.replace(/^ +| +$/g, "");
+      if (normalized) {
+        const withEntities = normalized.replace(/\u00a0/g, "&nbsp;");
+        lines.push(`${indent}${withEntities}`);
       }
       return;
     }
