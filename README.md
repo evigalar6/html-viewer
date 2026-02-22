@@ -1,6 +1,8 @@
 # HTML Side Viewer
 
 Chrome extension that captures the current page HTML and shows it as plain text in a side panel or standalone tab.
+<img width="3584" height="1764" alt="image" src="https://github.com/user-attachments/assets/aee792fb-fb40-46ff-8c00-70501f1f87b4" />
+
 
 ## Features
 
