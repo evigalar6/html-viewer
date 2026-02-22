@@ -1,0 +1,11 @@
+{
+    "manifest_version": 3,
+    "name": "HTML Side Viewer",
+    "version": "0.1.0",
+    "description": "Shows the current page HTML in a side panel.",
+    "permissions": ["sidePanel", "activeTab", "scripting", "downloads"],
+    "host_permissions": ["<all_urls>"],
+    "action": { "default_title": "HTML Viewer" },
+    "background": { "service_worker": "sw.js" },
+    "side_panel": { "default_path": "sidepanel.html" }
+  }
