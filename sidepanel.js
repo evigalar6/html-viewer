@@ -5,6 +5,7 @@ const grabBtn = document.getElementById('grab');
 const openTabBtn = document.getElementById('openTab');
 const copyBtn = document.getElementById('copy');
 const downloadBtn = document.getElementById('download');
+const status = document.getElementById('status');
 
 const params = new URLSearchParams(window.location.search);
 const initialSourceTabId = Number.parseInt(params.get("sourceTabId") || "", 10);
@@ -12,12 +13,48 @@ const initialSourceTabId = Number.parseInt(params.get("sourceTabId") || "", 10);
 let lastHtml = "";
 let sourceTabId = Number.isInteger(initialSourceTabId) ? initialSourceTabId : null;
 const extensionPagePrefix = chrome.runtime.getURL("");
+let statusTimer = null;
 
-// Filter rendered output with a simple text search.
+function setStatus(message, tone = "info") {
+  if (!status) {
+    return;
+  }
+
+  status.textContent = message;
+  status.className = `status ${tone}`;
+  if (statusTimer) {
+    clearTimeout(statusTimer);
+  }
+  statusTimer = setTimeout(() => {
+    status.textContent = "";
+    status.className = "status";
+  }, 2800);
+}
+
+function escapeHtml(input) {
+  return input
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
+function escapeRegExp(input) {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Render as escaped text and highlight current matches.
 function render() {
   const needle = q.value.trim();
-  const view = needle ? lastHtml.split(needle).join(`<<<${needle}>>>`) : lastHtml;
-  out.textContent = view;
+  const escapedHtml = escapeHtml(lastHtml);
+
+  if (!needle) {
+    out.textContent = lastHtml;
+    return;
+  }
+
+  const escapedNeedle = escapeHtml(needle);
+  const pattern = new RegExp(escapeRegExp(escapedNeedle), "gi");
+  out.innerHTML = escapedHtml.replace(pattern, "<mark>$&</mark>");
 }
 
 async function resolveSourceTabId() {
@@ -39,7 +76,7 @@ async function resolveSourceTabId() {
 async function captureHtml() {
   const tabId = await resolveSourceTabId();
   if (!tabId) {
-    out.textContent = "No source tab found.";
+    setStatus("No source tab found.", "error");
     return;
   }
 
@@ -50,6 +87,7 @@ async function captureHtml() {
 
   lastHtml = result || "";
   render();
+  setStatus("HTML captured.", "success");
 }
 
 grabBtn.addEventListener('click', async () => {
@@ -57,6 +95,7 @@ grabBtn.addEventListener('click', async () => {
     await captureHtml();
   } catch (error) {
     out.textContent = `Failed to capture HTML: ${error?.message || "Unknown error"}`;
+    setStatus("Capture failed.", "error");
   }
 });
 
@@ -73,8 +112,10 @@ openTabBtn.addEventListener('click', async () => {
       url: url.toString(),
       openerTabId: tabId || undefined
     });
+    setStatus("Opened in a new tab.", "success");
   } catch (error) {
     out.textContent = `Failed to open tab viewer: ${error?.message || "Unknown error"}`;
+    setStatus("Could not open tab viewer.", "error");
   }
 });
 
@@ -86,19 +127,21 @@ q.addEventListener('input', () => {
 copyBtn.addEventListener('click', async () => {
   try {
     if (!lastHtml) {
-      out.textContent = "Nothing to copy. Capture HTML first.";
+      setStatus("Nothing to copy. Capture HTML first.", "error");
       return;
     }
     await navigator.clipboard.writeText(lastHtml);
+    setStatus("Copied to clipboard.", "success");
   } catch (error) {
     out.textContent = `Failed to copy HTML: ${error?.message || "Unknown error"}`;
+    setStatus("Copy failed.", "error");
   }
 });
 
 downloadBtn.addEventListener('click', async () => {
   try {
     if (!lastHtml) {
-      out.textContent = "Nothing to download. Capture HTML first.";
+      setStatus("Nothing to download. Capture HTML first.", "error");
       return;
     }
 
@@ -110,7 +153,9 @@ downloadBtn.addEventListener('click', async () => {
       saveAs: true
     });
     URL.revokeObjectURL(url);
+    setStatus("Download started.", "success");
   } catch (error) {
     out.textContent = `Failed to download HTML: ${error?.message || "Unknown error"}`;
+    setStatus("Download failed.", "error");
   }
 });

@@ -8,10 +8,30 @@
     <title>HTML Viewer</title>
 
     <style>
-      /* Simple, clean styling focused on readability. */
+      :root {
+        --bg: #f2f6fb;
+        --surface: #ffffff;
+        --surface-soft: #f8fbff;
+        --text: #1b2733;
+        --muted: #56718a;
+        --border: #d0dfed;
+        --primary: #0f6ab8;
+        --primary-hover: #0b5a9d;
+        --mark-bg: #ffd66b;
+        --mark-text: #3b2a00;
+        --success: #147a52;
+        --error: #b73d3d;
+      }
+
       body {
         font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-        margin: 12px;
+        margin: 0;
+        padding: 14px;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 100% 0%, #d9ebff 0%, transparent 45%),
+          radial-gradient(circle at 0% 100%, #dff6ed 0%, transparent 38%),
+          var(--bg);
       }
 
       .row {
@@ -22,39 +42,87 @@
       }
 
       button {
-        padding: 8px 10px;
-        border: 1px solid #ddd;
+        padding: 9px 12px;
+        border: 1px solid var(--border);
         border-radius: 10px;
-        background: #fff;
+        background: var(--surface);
+        color: var(--text);
+        font-weight: 600;
         cursor: pointer;
+        box-shadow: 0 1px 3px rgba(25, 47, 66, 0.08);
+        transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+      }
+
+      button:hover {
+        border-color: #b7cee3;
+        box-shadow: 0 4px 10px rgba(25, 47, 66, 0.12);
       }
 
       button:active {
         transform: translateY(1px);
       }
 
+      #grab {
+        background: linear-gradient(180deg, #1f80d1, var(--primary));
+        border-color: var(--primary);
+        color: #fff;
+      }
+
+      #grab:hover {
+        background: linear-gradient(180deg, #2578bf, var(--primary-hover));
+        border-color: var(--primary-hover);
+      }
+
+      .status {
+        min-height: 20px;
+        margin-top: 10px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .status.success {
+        color: var(--success);
+      }
+
+      .status.error {
+        color: var(--error);
+      }
+
       input {
         width: 100%;
-        padding: 8px 10px;
+        box-sizing: border-box;
+        padding: 10px 12px;
         margin: 10px 0;
-        border: 1px solid #ddd;
+        border: 1px solid var(--border);
         border-radius: 10px;
+        background: var(--surface);
+        color: var(--text);
+        font-size: 14px;
       }
 
       pre {
         white-space: pre-wrap;
         word-break: break-word;
-        padding: 10px;
-        border: 1px solid #ddd;
+        padding: 12px;
+        border: 1px solid var(--border);
         border-radius: 12px;
         max-height: 70vh;
         overflow: auto;
-        background: #fafafa;
+        background: var(--surface-soft);
+        font-size: 14px;
+        line-height: 1.55;
+      }
+
+      mark {
+        background: var(--mark-bg);
+        color: var(--mark-text);
+        border-radius: 4px;
+        padding: 0 2px;
       }
 
       .hint {
         font-size: 12px;
-        opacity: 0.75;
+        color: var(--muted);
         margin-top: 8px;
       }
     </style>
@@ -68,6 +136,7 @@
       <button id="copy" type="button">Copy</button>
       <button id="download" type="button">Download</button>
     </div>
+    <div id="status" class="status" role="status" aria-live="polite"></div>
 
     <!-- Search in the captured HTML snapshot for quick navigation. -->
     <input id="q" type="text" placeholder="Search HTML (text)" autocomplete="off" />
