@@ -21,6 +21,7 @@ Chrome extension that captures the current page HTML and shows it as plain text 
 - `viewer.html` - Standalone tab UI
 - `sidepanel.js` - Shared viewer logic for both UIs
 - `sw.js` - Minimal background service worker
+- `icons/` - Extension logos (`.svg` sources + Chrome PNG sizes)
 
 ## Recent Improvements
 
