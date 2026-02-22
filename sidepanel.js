@@ -31,30 +31,49 @@ function setStatus(message, tone = "info") {
   }, 2800);
 }
 
-function escapeHtml(input) {
-  return input
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
-}
-
 function escapeRegExp(input) {
   return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-// Render as escaped text and highlight current matches.
+function renderHighlightedText(source, needle) {
+  const pattern = new RegExp(escapeRegExp(needle), "gi");
+  const fragment = document.createDocumentFragment();
+  let lastIndex = 0;
+  let match = pattern.exec(source);
+
+  while (match) {
+    const start = match.index;
+    const end = start + match[0].length;
+
+    if (start > lastIndex) {
+      fragment.append(document.createTextNode(source.slice(lastIndex, start)));
+    }
+
+    const mark = document.createElement("mark");
+    mark.textContent = source.slice(start, end);
+    fragment.append(mark);
+
+    lastIndex = end;
+    match = pattern.exec(source);
+  }
+
+  if (lastIndex < source.length) {
+    fragment.append(document.createTextNode(source.slice(lastIndex)));
+  }
+
+  out.replaceChildren(fragment);
+}
+
+// Render as plain text and preserve exact formatting.
 function render() {
   const needle = q.value.trim();
-  const escapedHtml = escapeHtml(lastHtml);
 
   if (!needle) {
     out.textContent = lastHtml;
     return;
   }
 
-  const escapedNeedle = escapeHtml(needle);
-  const pattern = new RegExp(escapeRegExp(escapedNeedle), "gi");
-  out.innerHTML = escapedHtml.replace(pattern, "<mark>$&</mark>");
+  renderHighlightedText(lastHtml, needle);
 }
 
 async function resolveSourceTabId() {
