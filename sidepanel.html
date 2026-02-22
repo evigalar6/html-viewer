@@ -41,6 +41,14 @@
         flex-wrap: wrap;
       }
 
+      .tools {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+      }
+
       button {
         padding: 9px 12px;
         border: 1px solid var(--border);
@@ -89,10 +97,11 @@
       }
 
       input {
-        width: 100%;
+        flex: 1;
+        min-width: 220px;
         box-sizing: border-box;
         padding: 10px 12px;
-        margin: 10px 0;
+        margin: 0;
         border: 1px solid var(--border);
         border-radius: 10px;
         background: var(--surface);
@@ -101,18 +110,26 @@
       }
 
       pre {
-        white-space: pre;
-        word-break: normal;
+        white-space: pre-wrap;
+        word-break: break-word;
+        overflow-wrap: anywhere;
         tab-size: 2;
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
         padding: 12px;
         border: 1px solid var(--border);
         border-radius: 12px;
-        max-height: 70vh;
-        overflow: auto;
+        max-height: min(72vh, 900px);
+        overflow: scroll;
+        scrollbar-gutter: stable both-edges;
         background: var(--surface-soft);
         font-size: 14px;
         line-height: 1.55;
+      }
+
+      pre.no-wrap {
+        white-space: pre;
+        word-break: normal;
+        overflow-wrap: normal;
       }
 
       mark {
@@ -120,6 +137,45 @@
         color: var(--mark-text);
         border-radius: 4px;
         padding: 0 2px;
+      }
+
+      mark.current {
+        background: #ff9f1a;
+        color: #2f1e00;
+      }
+
+      .match-info {
+        font-size: 13px;
+        color: var(--muted);
+        min-width: 92px;
+      }
+
+      .check {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        color: var(--muted);
+        margin-left: auto;
+      }
+
+      #out::-webkit-scrollbar {
+        width: 12px;
+        height: 12px;
+      }
+
+      #out::-webkit-scrollbar-track {
+        background: #d7e4f1;
+        border-radius: 10px;
+      }
+
+      #out::-webkit-scrollbar-thumb {
+        background: #7d9dbb;
+        border-radius: 10px;
+      }
+
+      #out::-webkit-scrollbar-thumb:hover {
+        background: #6487a8;
       }
 
       .hint {
@@ -141,7 +197,16 @@
     <div id="status" class="status" role="status" aria-live="polite"></div>
 
     <!-- Search in the captured HTML snapshot for quick navigation. -->
-    <input id="q" type="text" placeholder="Search HTML (text)" autocomplete="off" />
+    <div class="tools">
+      <input id="q" type="text" placeholder="Search HTML (text)" autocomplete="off" />
+      <button id="prevMatch" type="button">Prev</button>
+      <button id="nextMatch" type="button">Next</button>
+      <span id="matchInfo" class="match-info">0 matches</span>
+      <label class="check" for="wrapLines">
+        <input id="wrapLines" type="checkbox" checked />
+        Wrap lines
+      </label>
+    </div>
 
     <!-- Render HTML as text so markup is never executed in the panel. -->
     <pre id="out">(click "Capture HTML")</pre>

@@ -6,6 +6,10 @@ const openTabBtn = document.getElementById('openTab');
 const copyBtn = document.getElementById('copy');
 const downloadBtn = document.getElementById('download');
 const status = document.getElementById('status');
+const prevMatchBtn = document.getElementById('prevMatch');
+const nextMatchBtn = document.getElementById('nextMatch');
+const matchInfo = document.getElementById('matchInfo');
+const wrapLinesToggle = document.getElementById('wrapLines');
 
 const params = new URLSearchParams(window.location.search);
 const initialSourceTabId = Number.parseInt(params.get("sourceTabId") || "", 10);
@@ -14,6 +18,8 @@ let lastHtml = "";
 let sourceTabId = Number.isInteger(initialSourceTabId) ? initialSourceTabId : null;
 const extensionPagePrefix = chrome.runtime.getURL("");
 let statusTimer = null;
+let matchNodes = [];
+let currentMatchIndex = -1;
 
 function setStatus(message, tone = "info") {
   if (!status) {
@@ -50,6 +56,7 @@ function renderHighlightedText(source, needle) {
     }
 
     const mark = document.createElement("mark");
+    mark.className = "search-hit";
     mark.textContent = source.slice(start, end);
     fragment.append(mark);
 
@@ -62,6 +69,46 @@ function renderHighlightedText(source, needle) {
   }
 
   out.replaceChildren(fragment);
+  matchNodes = Array.from(out.querySelectorAll("mark.search-hit"));
+}
+
+function updateMatchControls() {
+  const total = matchNodes.length;
+  const hasMatches = total > 0;
+
+  if (!q.value.trim()) {
+    matchInfo.textContent = "0 matches";
+  } else if (!hasMatches) {
+    matchInfo.textContent = "No matches";
+  } else {
+    matchInfo.textContent = `${currentMatchIndex + 1}/${total}`;
+  }
+
+  prevMatchBtn.disabled = !hasMatches;
+  nextMatchBtn.disabled = !hasMatches;
+}
+
+function setCurrentMatch(index, shouldScroll = true) {
+  if (!matchNodes.length) {
+    currentMatchIndex = -1;
+    updateMatchControls();
+    return;
+  }
+
+  const total = matchNodes.length;
+  currentMatchIndex = ((index % total) + total) % total;
+
+  for (const node of matchNodes) {
+    node.classList.remove("current");
+  }
+
+  const active = matchNodes[currentMatchIndex];
+  active.classList.add("current");
+  if (shouldScroll) {
+    active.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+  }
+
+  updateMatchControls();
 }
 
 // Render as plain text and preserve exact formatting.
@@ -70,10 +117,14 @@ function render() {
 
   if (!needle) {
     out.textContent = lastHtml;
+    matchNodes = [];
+    currentMatchIndex = -1;
+    updateMatchControls();
     return;
   }
 
   renderHighlightedText(lastHtml, needle);
+  setCurrentMatch(0, false);
 }
 
 async function resolveSourceTabId() {
@@ -142,6 +193,21 @@ q.addEventListener('input', () => {
   // Search runs locally on the captured snapshot.
   render();
 });
+
+prevMatchBtn.addEventListener("click", () => {
+  setCurrentMatch(currentMatchIndex - 1);
+});
+
+nextMatchBtn.addEventListener("click", () => {
+  setCurrentMatch(currentMatchIndex + 1);
+});
+
+wrapLinesToggle.addEventListener("change", () => {
+  out.classList.toggle("no-wrap", !wrapLinesToggle.checked);
+});
+
+out.classList.toggle("no-wrap", !wrapLinesToggle.checked);
+updateMatchControls();
 
 copyBtn.addEventListener('click', async () => {
   try {
