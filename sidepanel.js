@@ -10,6 +10,7 @@ const prevMatchBtn = document.getElementById('prevMatch');
 const nextMatchBtn = document.getElementById('nextMatch');
 const matchInfo = document.getElementById('matchInfo');
 const wrapLinesToggle = document.getElementById('wrapLines');
+const prettyViewToggle = document.getElementById('prettyView');
 
 const params = new URLSearchParams(window.location.search);
 const initialSourceTabId = Number.parseInt(params.get("sourceTabId") || "", 10);
@@ -20,6 +21,8 @@ const extensionPagePrefix = chrome.runtime.getURL("");
 let statusTimer = null;
 let matchNodes = [];
 let currentMatchIndex = -1;
+let cachedPrettyRaw = null;
+let cachedPretty = "";
 
 function setStatus(message, tone = "info") {
   if (!status) {
@@ -39,6 +42,113 @@ function setStatus(message, tone = "info") {
 
 function escapeRegExp(input) {
   return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function formatHtmlForView(rawHtml) {
+  if (!rawHtml) {
+    return "";
+  }
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(rawHtml, "text/html");
+  const lines = [];
+  const indentUnit = "  ";
+  const voidTags = new Set([
+    "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta",
+    "param", "source", "track", "wbr"
+  ]);
+  const keepRawText = new Set(["script", "style", "pre", "textarea"]);
+  const doctypeMatch = rawHtml.match(/<!doctype[^>]*>/i);
+
+  if (doctypeMatch) {
+    lines.push(doctypeMatch[0].toLowerCase());
+  }
+
+  function formatAttributes(element) {
+    if (!element.attributes.length) {
+      return "";
+    }
+
+    const attrs = Array.from(element.attributes).map((attr) => {
+      const safeValue = attr.value.replaceAll('"', "&quot;");
+      return `${attr.name}="${safeValue}"`;
+    });
+
+    return ` ${attrs.join(" ")}`;
+  }
+
+  function walk(node, depth, parentTag = "") {
+    const indent = indentUnit.repeat(depth);
+
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const tag = node.tagName.toLowerCase();
+      const attrs = formatAttributes(node);
+      const opening = `<${tag}${attrs}>`;
+
+      if (voidTags.has(tag)) {
+        lines.push(`${indent}${opening}`);
+        return;
+      }
+
+      const children = Array.from(node.childNodes);
+      const hasSignificantChildren = children.some((child) => (
+        child.nodeType !== Node.TEXT_NODE || child.textContent.trim()
+      ));
+
+      if (!hasSignificantChildren) {
+        lines.push(`${indent}${opening}</${tag}>`);
+        return;
+      }
+
+      lines.push(`${indent}${opening}`);
+      for (const child of children) {
+        walk(child, depth + 1, tag);
+      }
+      lines.push(`${indent}</${tag}>`);
+      return;
+    }
+
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent || "";
+
+      if (keepRawText.has(parentTag)) {
+        const rawLines = text.replaceAll("\r\n", "\n").split("\n");
+        for (const line of rawLines) {
+          if (line.length > 0) {
+            lines.push(`${indent}${line}`);
+          }
+        }
+        return;
+      }
+
+      const compact = text.replace(/\s+/g, " ").trim();
+      if (compact) {
+        lines.push(`${indent}${compact}`);
+      }
+      return;
+    }
+
+    if (node.nodeType === Node.COMMENT_NODE) {
+      lines.push(`${indent}<!--${node.nodeValue || ""}-->`);
+    }
+  }
+
+  walk(doc.documentElement, 0);
+  return lines.join("\n");
+}
+
+function getRenderSource() {
+  if (!prettyViewToggle?.checked) {
+    return lastHtml;
+  }
+
+  if (cachedPrettyRaw === lastHtml) {
+    return cachedPretty;
+  }
+
+  cachedPrettyRaw = lastHtml;
+  cachedPretty = formatHtmlForView(lastHtml);
+  return cachedPretty;
 }
 
 function renderHighlightedText(source, needle) {
@@ -113,17 +223,18 @@ function setCurrentMatch(index, shouldScroll = true) {
 
 // Render as plain text and preserve exact formatting.
 function render() {
+  const renderSource = getRenderSource();
   const needle = q.value.trim();
 
   if (!needle) {
-    out.textContent = lastHtml;
+    out.textContent = renderSource;
     matchNodes = [];
     currentMatchIndex = -1;
     updateMatchControls();
     return;
   }
 
-  renderHighlightedText(lastHtml, needle);
+  renderHighlightedText(renderSource, needle);
   setCurrentMatch(0, false);
 }
 
@@ -156,6 +267,8 @@ async function captureHtml() {
   });
 
   lastHtml = result || "";
+  cachedPrettyRaw = null;
+  cachedPretty = "";
   render();
   setStatus("HTML captured.", "success");
 }
@@ -204,6 +317,11 @@ nextMatchBtn.addEventListener("click", () => {
 
 wrapLinesToggle.addEventListener("change", () => {
   out.classList.toggle("no-wrap", !wrapLinesToggle.checked);
+});
+
+prettyViewToggle.addEventListener("change", () => {
+  render();
+  setStatus(prettyViewToggle.checked ? "Pretty view enabled." : "Raw view enabled.", "info");
 });
 
 out.classList.toggle("no-wrap", !wrapLinesToggle.checked);

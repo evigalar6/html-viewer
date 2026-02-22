@@ -156,6 +156,9 @@
         gap: 6px;
         font-size: 13px;
         color: var(--muted);
+      }
+
+      .check.push-right {
         margin-left: auto;
       }
 
@@ -202,6 +205,10 @@
       <button id="prevMatch" type="button">Prev</button>
       <button id="nextMatch" type="button">Next</button>
       <span id="matchInfo" class="match-info">0 matches</span>
+      <label class="check push-right" for="prettyView">
+        <input id="prettyView" type="checkbox" checked />
+        Pretty view
+      </label>
       <label class="check" for="wrapLines">
         <input id="wrapLines" type="checkbox" checked />
         Wrap lines
